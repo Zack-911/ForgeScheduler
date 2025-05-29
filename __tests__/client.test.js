@@ -7,7 +7,7 @@ const client = new ForgeClient({
     new ForgeScheduler()
   ],
     events: [
-        'messageCreate'
+        'messageCreate',
     ],
     intents: [
         'Guilds',

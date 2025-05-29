@@ -1,7 +1,7 @@
 {
   "name": "forgescheduler",
   "version": "1.0.0",
-  "description": "",
+  "description": "A task scheduler for forgescript to use in your bots.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
@@ -18,15 +18,15 @@
     "botforge",
     "tryforge"
   ],
-  "author": "ruben40000",
+  "author": "Zack-911",
   "license": "GPL-3.0",
-  "dependencies": {
-    "tiny-typed-emitter": "^2.1.0"
-  },
   "devDependencies": {
     "@tryforge/forgescript": "^2.3.0",
     "@types/node": "^20.10.6",
     "dotenv": "^16.3.1",
     "typescript": "^5.3.3"
+  },
+  "dependencies": {
+    "forgescheduler": "github:Zack-911/ForgeScheduler#dev"
   }
 }
