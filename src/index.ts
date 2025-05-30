@@ -1,35 +1,25 @@
-import { EventManager, ForgeClient, ForgeExtension, IExtendedCompiledFunctionField } from "@tryforge/forgescript";
-import { ForgeSchedulerEventsName } from "./constants";
-import { ForgeSchedulerCommandManager } from "./structures/ForgeSchedulerCommandManager";
-import { IForgeSchedulerEvents } from "./structures/ForgeSchedulerEventHandlers";
-import { TypedEmitter } from "tiny-typed-emitter";
-import { PausedSchedules } from "./types";
-export type TransformEvents<T> = {
-    [P in keyof T]: T[P] extends any[] ? (...args: T[P]) => any : never
-}
+import {
+    ForgeExtension,
+    ForgeClient,
+    IExtendedCompiledFunctionField
+} from "@tryforge/forgescript"
+import { PausedSchedules } from "./types"
+
 
 export class ForgeScheduler extends ForgeExtension {
     name = "forge.scheduler"
-    description = "Scheduler."
+    description = "Extension for scheduling repeated tasks."
     version = require("../package.json").version
 
-    private client!: ForgeClient
-    private emitter = new TypedEmitter<TransformEvents<IForgeSchedulerEvents>>()
+    private instance!: ForgeClient
 
-    public commands!: ForgeSchedulerCommandManager
-  options: any;
+    config: any
+    commands: any
 
     init(client: ForgeClient): void {
-        this.client = client
-        this.commands = new ForgeSchedulerCommandManager(client)
+        this.instance = client
 
-        EventManager.load(ForgeSchedulerEventsName, __dirname + `/events`)
-        this.load(__dirname + `/functions`)
-        client.pausedSchedules = new Map();
-        client.scheduleCounts = new Map();
-        client.lastTick = new Map();
-        client.remainingTimes = new Map();
-
+        this.load(__dirname + "/functions")
     }
 }
 
@@ -46,6 +36,13 @@ declare module "@tryforge/forgescript" {
         scheduleCounts?: Map<string, number>;
         code?: IExtendedCompiledFunctionField;
         time?: number;
+        atTime?: string;
+        offset?: number;
+        startClock?: any;
+        lastRunDay?: string;
+        timezone?: string;
+        uneditable?: boolean;
+        days?: string[];
       }
     >;
   }

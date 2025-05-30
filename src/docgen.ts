@@ -1,11 +1,10 @@
 import { generateMetadata } from "@tryforge/forgescript"
-import { ForgeSchedulerEventsName } from "./constants"
-
+import { generateDocsFromMetadata } from "./generateMdFunctions"
+import fs from "fs"
 generateMetadata(
     __dirname + "/functions",
     "functions",
-    ForgeSchedulerEventsName,
-    undefined,
-    undefined,
-    __dirname + "/events"
 )
+
+const docs = generateDocsFromMetadata("./metadata/functions.json")
+fs.writeFileSync("./metadata/functions.md", docs)
