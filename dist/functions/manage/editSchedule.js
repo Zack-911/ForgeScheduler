@@ -3,8 +3,8 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const forgescript_1 = require("@tryforge/forgescript");
 exports.default = new forgescript_1.NativeFunction({
     name: "$editSchedule",
-    version: "1.0.0",
-    description: "Edits an existing schedule's code and/or time without resetting stats.",
+    version: "1.0.1",
+    description: "Edits an existing interval schedule's code and/or time unless marked uneditable.",
     brackets: true,
     unwrap: false,
     output: forgescript_1.ArgType.Boolean,
@@ -49,25 +49,23 @@ exports.default = new forgescript_1.NativeFunction({
         const schedule = ctx.client.scheduleData.get(trimmed);
         if (!schedule)
             return this.customError(`Schedule with ID "${trimmed}" does not exist.`);
-        let timeArg = null;
-        let newTime = schedule.time;
+        if (schedule.uneditable)
+            return this.customError("This schedule is uneditable.");
+        if (schedule.atTime)
+            return this.customError("You cannot edit a time-based schedule with this function.");
+        let newTime = schedule.time ?? 0;
         if (this.data.fields.length > 1) {
-            timeArg = await this["resolveUnhandledArg"](ctx, 1);
+            const timeArg = await this["resolveUnhandledArg"](ctx, 1);
             if (timeArg && !this["isValidReturnType"](timeArg))
                 return timeArg;
             if (timeArg && timeArg.value !== undefined)
                 newTime = timeArg.value;
         }
-        let codeArg = null;
-        let newCode;
-        if (schedule.code) {
-            newCode = schedule.code;
-        }
-        else {
-            return this.customError("Schedule is missing compiled code.");
-        }
+        let newCode = schedule.code;
+        if (!newCode)
+            return this.customError("Compiled code is missing.");
         if (this.data.fields.length > 2) {
-            codeArg = await this["resolveUnhandledArg"](ctx, 2);
+            const codeArg = await this["resolveUnhandledArg"](ctx, 2);
             if (codeArg && !this["isValidReturnType"](codeArg))
                 return codeArg;
             if (codeArg && codeArg.value !== undefined) {
@@ -75,16 +73,14 @@ exports.default = new forgescript_1.NativeFunction({
             }
         }
         ctx.client.scheduleData.set(trimmed, {
+            ...schedule,
             code: newCode,
-            time: newTime
+            time: newTime,
         });
         if (ctx.client.intervals.has(trimmed)) {
             clearTimeout(ctx.client.intervals.get(trimmed));
             ctx.client.intervals.delete(trimmed);
         }
-        const firstInterval = timeArg ? newTime : ctx.client.remainingTimes.get(trimmed) ?? newTime;
-        ctx.client.remainingTimes.set(trimmed, newTime);
-        ctx.client.lastTick.set(trimmed, Date.now());
         const runJob = async () => {
             if (ctx.client.pausedSchedules.get(trimmed))
                 return;
@@ -95,10 +91,12 @@ exports.default = new forgescript_1.NativeFunction({
             ctx.client.lastTick.set(trimmed, Date.now());
         };
         const scheduleNext = () => {
+            ctx.client.lastTick.set(trimmed, Date.now());
+            ctx.client.remainingTimes.set(trimmed, newTime);
             ctx.client.intervals.set(trimmed, setTimeout(async () => {
                 await runJob();
                 scheduleNext();
-            }, firstInterval));
+            }, newTime));
         };
         scheduleNext();
         return this.success(true);

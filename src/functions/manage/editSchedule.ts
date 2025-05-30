@@ -2,8 +2,7 @@ import { ArgType, IExtendedCompiledFunctionField, NativeFunction, Return } from 
 
 export default new NativeFunction({
     name: "$editSchedule",
-    version: "1.0.0",
-    description: "Edits an existing schedule's code and/or time without resetting stats.",
+    description: "Edits an existing interval schedule's code and/or time unless marked uneditable.",
     brackets: true,
     unwrap: false,
     output: ArgType.Boolean,
@@ -39,28 +38,25 @@ export default new NativeFunction({
 
         const jobID: Return = await this["resolveUnhandledArg"](ctx, 0)
         if (!this["isValidReturnType"](jobID)) return jobID
+
         const trimmed = (jobID.value as string).trim()
-
         const schedule = ctx.client.scheduleData.get(trimmed)
-        if (!schedule) return this.customError(`Schedule with ID "${trimmed}" does not exist.`)
 
-        let timeArg: Return | null = null
-        let newTime = schedule.time as number
+        if (!schedule) return this.customError(`Schedule with ID "${trimmed}" does not exist.`)
+        if (schedule.uneditable) return this.customError("This schedule is uneditable.")
+        if (schedule.atTime) return this.customError("You cannot edit a time-based schedule with this function.")
+
+        let newTime = schedule.time ?? 0
         if (this.data.fields!.length > 1) {
-            timeArg = await this["resolveUnhandledArg"](ctx, 1)
+            const timeArg = await this["resolveUnhandledArg"](ctx, 1)
             if (timeArg && !this["isValidReturnType"](timeArg)) return timeArg
             if (timeArg && timeArg.value !== undefined) newTime = timeArg.value as number
         }
 
-        let codeArg: Return | null = null
-        let newCode: IExtendedCompiledFunctionField
-        if (schedule.code) {
-            newCode = schedule.code
-        } else {
-            return this.customError("Schedule is missing compiled code.")
-        }
+        let newCode = schedule.code
+        if (!newCode) return this.customError("Compiled code is missing.")
         if (this.data.fields!.length > 2) {
-            codeArg = await this["resolveUnhandledArg"](ctx, 2)
+            const codeArg = await this["resolveUnhandledArg"](ctx, 2)
             if (codeArg && !this["isValidReturnType"](codeArg)) return codeArg
             if (codeArg && codeArg.value !== undefined) {
                 newCode = this.data.fields![2] as IExtendedCompiledFunctionField
@@ -68,8 +64,9 @@ export default new NativeFunction({
         }
 
         ctx.client.scheduleData.set(trimmed, {
+            ...schedule,
             code: newCode,
-            time: newTime
+            time: newTime,
         })
 
         if (ctx.client.intervals.has(trimmed)) {
@@ -77,30 +74,27 @@ export default new NativeFunction({
             ctx.client.intervals.delete(trimmed)
         }
 
-        const firstInterval = timeArg ? newTime : ctx.client.remainingTimes.get(trimmed) ?? newTime
-        ctx.client.remainingTimes.set(trimmed, newTime)
-        ctx.client.lastTick.set(trimmed, Date.now())
-
         const runJob = async () => {
             if (ctx.client.pausedSchedules.get(trimmed)) return
             const prev = ctx.client.scheduleCounts.get(trimmed) || 0
             ctx.client.scheduleCounts.set(trimmed, prev + 1)
-            await this["resolveCode"](ctx, newCode)
+            await this["resolveCode"](ctx, newCode!)
             ctx.client.remainingTimes.set(trimmed, newTime)
             ctx.client.lastTick.set(trimmed, Date.now())
         }
 
         const scheduleNext = () => {
+            ctx.client.lastTick.set(trimmed, Date.now())
+            ctx.client.remainingTimes.set(trimmed, newTime)
             ctx.client.intervals.set(trimmed,
                 setTimeout(async () => {
                     await runJob()
                     scheduleNext()
-                }, firstInterval)
+                }, newTime)
             )
         }
 
         scheduleNext()
-
         return this.success(true)
     }
 })

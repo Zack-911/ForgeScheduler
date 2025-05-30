@@ -36,6 +36,13 @@ declare module "@tryforge/forgescript" {
         scheduleCounts?: Map<string, number>;
         code?: IExtendedCompiledFunctionField;
         time?: number;
+        atTime?: string;
+        offset?: number;
+        startClock?: any;
+        lastRunDay?: string;
+        timezone?: string;
+        uneditable?: boolean;
+        days?: string[];
       }
     >;
   }
