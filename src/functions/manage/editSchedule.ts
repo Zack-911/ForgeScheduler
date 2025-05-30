@@ -2,6 +2,7 @@ import { ArgType, IExtendedCompiledFunctionField, NativeFunction, Return } from 
 
 export default new NativeFunction({
     name: "$editSchedule",
+    version: "1.1.0",
     description: "Edits an existing interval schedule's code and/or time unless marked uneditable.",
     brackets: true,
     unwrap: false,

@@ -3,7 +3,6 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const forgescript_1 = require("@tryforge/forgescript");
 exports.default = new forgescript_1.NativeFunction({
     name: "$startScheduleAtTime",
-    version: "1.0.0",
     description: "Starts a schedule that runs every day at a specific time in a given timezone and optional days.",
     brackets: false,
     unwrap: false,
